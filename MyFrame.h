@@ -69,7 +69,9 @@ MyFrame::MyFrame(const wxString& title) //Re-define constructor
 
 void MyFrame::OnOpen(wxCommandEvent& event) {
     // Create a file dialog
-    wxFileDialog wxFileDialog(this, "Open File", "", "", "Text Files (*.txt)|*.txt|CSV Files (*.csv)|*.csv", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+    wxFileDialog wxFileDialog(this, "Open File", "", "", 
+                            "Text Files (*.txt)|*.txt|CSV Files (*.csv)|*.csv", 
+                            wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 
     // Show the file
     if (wxFileDialog.ShowModal() == wxID_CANCEL)
@@ -103,17 +105,17 @@ void MyFrame::LoadFileToGrid(const wxString& filePath) {
         return;
     }
 
-    // std::string line;
-    // int row = 0;
-    // while (std::getline(file, line) && row < MyFrame::grid->GetNumberRows()) {
-    //     wxStringTokenizer tokenizer(line, ",");
-    //     int col = 0;
-    //     while (tokenizer.HasMoreTokens() && col < MyFrame::grid->GetNumberCols()) {
-    //         wxString token = tokenizer.GetNextToken();
-    //         grid->SetCellValue(row, col, token);
-    //         col++;
-    //     }
-    //     row++;
-    // }
+    std::string line;
+    int row = 0;
+    while (std::getline(file, line) && row < MyFrame::grid->GetNumberRows()) {
+        wxStringTokenizer tokenizer(line, ",");
+        int col = 0;
+        while (tokenizer.HasMoreTokens() && col < MyFrame::grid->GetNumberCols()) {
+            wxString token = tokenizer.GetNextToken();
+            grid->SetCellValue(row, col, token);
+            col++;
+        }
+        row++;
+    }
     file.close();  
 }
