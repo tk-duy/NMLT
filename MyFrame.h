@@ -26,7 +26,8 @@ enum
 };
 
 // Implementing functions
-MyFrame::MyFrame(const wxString& title) //Re-define constructor
+//Re-define constructor
+MyFrame::MyFrame(const wxString& title) 
     : wxFrame(NULL, wxID_ANY, title, wxDefaultPosition, wxSize(800, 600)) {
     wxPanel* panel = new wxPanel(this, wxID_ANY);
 
@@ -47,9 +48,7 @@ MyFrame::MyFrame(const wxString& title) //Re-define constructor
  
     SetMenuBar( menuBar );
  
-    // CreateStatusBar();
-    // SetStatusText("Welcome to wxWidgets!");
-
+    // Add event to menu
     Bind(wxEVT_MENU, &MyFrame::OnOpen, this, wxID_OPEN);
     Bind(wxEVT_MENU, &MyFrame::Plotting, this, ID_PLOT);
     Bind(wxEVT_MENU, &MyFrame::OnAbout, this, wxID_ABOUT);
@@ -66,7 +65,7 @@ MyFrame::MyFrame(const wxString& title) //Re-define constructor
 
     panel->SetSizerAndFit(sizer);
 }
-
+// File openning method
 void MyFrame::OnOpen(wxCommandEvent& event) {
     // Create a file dialog
     wxFileDialog wxFileDialog(this, "Open File", "", "", 
@@ -80,23 +79,23 @@ void MyFrame::OnOpen(wxCommandEvent& event) {
     wxString filePath = wxFileDialog.GetPath();
     LoadFileToGrid(filePath);
 }
-
+// Plotting method
 void MyFrame::Plotting(wxCommandEvent& event)
 {
     wxLogMessage("Ploting a graph by wxWidgets!");
 }
-
+// Exitting method
 void MyFrame::OnExit(wxCommandEvent& event)
 {
     Close(true);
 }
- 
+// About mathplotfit
 void MyFrame::OnAbout(wxCommandEvent& event)
 {
     wxMessageBox("This is a wxWidgets program",
                     "About MathPlotFit", wxOK | wxICON_INFORMATION);
 }
- 
+// Method of load file to grid 
 void MyFrame::LoadFileToGrid(const wxString& filePath) {
     std::ifstream file(filePath.ToStdString());
     if (!file.is_open()) {

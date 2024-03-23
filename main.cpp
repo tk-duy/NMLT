@@ -6,7 +6,7 @@
 class MyApp : public wxApp {
 public:
     virtual bool OnInit() {
-        MyFrame* frame = new MyFrame("My App");
+        MyFrame* frame = new MyFrame("MathPlotFit");
         frame->Show(true);
         return true;
     }
