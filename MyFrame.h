@@ -1,10 +1,11 @@
 #include <wx/wx.h>
 #include <wx-3.0/wx/grid.h>
-#include <iostream>
+#include <bits/stdc++.h>
 #include <fstream>
 #include <wx-3.0/wx/tokenzr.h>
 // #include <wx-3.0/wx/string.h>
 #include <string.h>
+#include "mathplot.h"
 
 class MyFrame : public wxFrame {
     public:
@@ -80,9 +81,44 @@ void MyFrame::OnOpen(wxCommandEvent& event) {
     LoadFileToGrid(filePath);
 }
 // Plotting method
-void MyFrame::Plotting(wxCommandEvent& event)
-{
-    wxLogMessage("Ploting a graph by wxWidgets!");
+void MyFrame::Plotting(wxCommandEvent& event) {
+    std::vector<double> xData = {-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5};
+    std::vector<double> yData = {-5, -4, -2, -1, -4, 4, 1, 1, 7, 2, 5};
+    auto minX = *std::min_element(xData.begin(), xData.end());
+    auto maxX = *std::max_element(xData.begin(), xData.end());
+    auto minY = *std::min_element(yData.begin(), yData.end());
+    auto maxY = *std::max_element(yData.begin(), yData.end());
+
+    wxFrame* plotFrame = new wxFrame(NULL, wxID_ANY, "Graph Plot",wxDefaultPosition, wxSize(1280,720));
+    mpWindow* plotWindows = new mpWindow(plotFrame, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSUNKEN_BORDER);
+
+    // Create a new plot and add it to the plot window
+    mpFXYVector* plot = new mpFXYVector();
+    plot->SetData(xData, yData);
+    plot->SetContinuity(false);
+
+    // Set line thickness for the plot
+    // Create a pen with blue color and thickness 2
+    wxPen pen(wxColour(255, 0, 0), 5, wxPENSTYLE_SOLID); 
+     // Set the pen for the plot
+    plot->SetPen(pen);
+
+    plotWindows->Fit(minX, maxX, minY, maxY);
+    plotWindows->AddLayer(plot);
+    plotWindows->UpdateAll();
+
+    // Add scale
+    mpScaleX *sx = new mpScaleX( wxT("x axis"), 1, false);
+    sx->SetAlign(mpALIGN_CENTER);
+    mpScaleY *sy = new mpScaleY( wxT("y axis"), 1, false);
+    sy->SetAlign(mpALIGN_CENTER);
+    plotWindows->AddLayer(sx);
+    plotWindows->AddLayer(sy);
+
+    plotWindows->EnableDoubleBuffer(true);
+    plotWindows->LockAspect();
+    // Set plot window as the main window
+    plotFrame->Show(true);    
 }
 // Exitting method
 void MyFrame::OnExit(wxCommandEvent& event)
@@ -92,7 +128,7 @@ void MyFrame::OnExit(wxCommandEvent& event)
 // About mathplotfit
 void MyFrame::OnAbout(wxCommandEvent& event)
 {
-    wxMessageBox("This is a wxWidgets program",
+    wxMessageBox("MathPlotFit is a tool for data processing.",
                     "About MathPlotFit", wxOK | wxICON_INFORMATION);
 }
 // Method of load file to grid 
