@@ -3,7 +3,8 @@
         {
             "name": "Linux",
             "includePath": [
-                "/usr/include/wx-3.0/wx"
+                "/usr/include/wx-3.0/wx",
+                "/usr/include/gsl"
             ],
             "defines": [],
             "cStandard": "c17",

@@ -1,4 +1,4 @@
-// g++ main.cpp -o main `wx-config --cxxflags --libs`
+// g++ -o main main.cpp mathplot.cpp `wx-config --cxxflags --libs`
 #include <wx/wx.h>
 #include "MyFrame.h"
 
