@@ -7,8 +7,10 @@
             "args": [
                 "${file}",
                 "-o",
-                "${fileDirname}/${fileBasenameNoExtension}",
+                "${fileDirname}/main",
+                "${fileDirname}/mathplot.cpp",
                 "`wx-config", "--cxxflags", "--libs`",
+                "-lgsl", "-lgslcblas",
             ],
             "options": {
                 "cwd": "${fileDirname}"
