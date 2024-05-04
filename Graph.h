@@ -21,21 +21,35 @@ class Graph : public wxFrame {
         void OnFitLogarithmic(wxCommandEvent& event);
 };
 
+enum {
+    ID_LINEAR,
+    ID_POLY,
+    ID_EXP,
+    ID_LOG,
+};
+
 Graph::Graph(std::vector<double>& x, std::vector<double>& y) 
-    : wxFrame(NULL, wxID_ANY, "title", wxDefaultPosition, wxSize(600,600))
+    : wxFrame(NULL, wxID_ANY, "2D Graph", wxDefaultPosition, wxSize(600,600))
      {
     mpWindow* plotWindows = new mpWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSUNKEN_BORDER);
 
     // Add menu 
     wxMenu* fitting = new wxMenu;
-    fitting->Append(wxID_ANY, "Linear model");
+    fitting->Append(ID_LINEAR, "Linear");
+    fitting->Append(ID_POLY, "Polynomial");
+    fitting->Append(ID_EXP, "Exponential");
+    fitting->Append(ID_LOG, "Logarithmic");
 
     wxMenuBar* bar = new wxMenuBar;
     bar->Append(fitting, "&Fitting");
     SetMenuBar(bar);
 
     // Connect event handler for menu
-    Bind(wxEVT_MENU, &Graph::OnFitLinear, this, wxID_ANY);
+    Bind(wxEVT_MENU, &Graph::OnFitLinear, this, ID_LINEAR);
+    Bind(wxEVT_MENU, &Graph::OnFitPolynomial, this, ID_POLY);
+    Bind(wxEVT_MENU, &Graph::OnFitExponential, this, ID_EXP);
+    Bind(wxEVT_MENU, &Graph::OnFitLogarithmic, this, ID_LOG);
+    
 
     this->xData = x;
     this->yData = y;
@@ -99,17 +113,51 @@ int linear(const gsl_vector* x, void* params, gsl_vector* f) {
 }
 
 // Polynomial model: y = ax^2 + bx + c
-int polynomial(const gsl_vector* x, void* params, const gsl_vector* f) {
+int polynomial(const gsl_vector* x, void* params, gsl_vector* f) {
+    const size_t n = ((std::vector<double>*)params)->size(); // Number of data points
+    std::vector<double>& data = *((std::vector<double>*)params);
+
+    for (size_t i = 0; i < n; ++i) {
+        double t = i; // Independent variable (e.g., time)
+        double y_model = 0.0;
+        for (size_t j = 0; j < x->size; ++j) {
+            y_model += gsl_vector_get(x, j) * std::pow(t, j); // Polynomial model
+        }
+        gsl_vector_set(f, i, y_model - data[i]); // Residual
+    }
+
     return GSL_SUCCESS;
 }
 
 // Exponential model: y = a*exp(bx)
-int exponential(const gsl_vector* x, void* params, const gsl_vector* f) {
+int exponential(const gsl_vector* x, void* params, gsl_vector* f) {
+    const size_t n = ((std::vector<double>*)params)->size(); // Number of data points
+    std::vector<double>& data = *((std::vector<double>*)params);
+
+    for (size_t i = 0; i < n; ++i) {
+        double t = i; // Independent variable (e.g., time)
+        double a = gsl_vector_get(x, 0); // Parameter a
+        double b = gsl_vector_get(x, 1); // Parameter b
+        double y_model = a * exp(b * t); // Exponential model
+        gsl_vector_set(f, i, y_model - data[i]); // Residual
+    }
+
     return GSL_SUCCESS;
 }
 
 // Logarithmic model: y = a + bln(x)
-int logarithmic(const gsl_vector* x, void* params, const gsl_vector* f) {
+int logarithmic(const gsl_vector* x, void* params, gsl_vector* f) {
+    const size_t n = ((std::vector<double>*)params)->size(); // Number of data points
+    std::vector<double>& data = *((std::vector<double>*)params);
+
+    for (size_t i = 0; i < n; ++i) {
+        double t = i; // Independent variable (e.g., time)
+        double a = gsl_vector_get(x, 0); // Parameter a
+        double b = gsl_vector_get(x, 1); // Parameter b
+        double y_model = a + b * log(t); // Logarithmic model
+        gsl_vector_set(f, i, y_model - data[i]); // Residual
+    }
+
     return GSL_SUCCESS;
 }
 
@@ -160,12 +208,21 @@ void Graph::OnFitLinear(wxCommandEvent& event) {
     auto fittedParams = Graph::Fitting(this->xData, this->yData);
     double fittedSlope = fittedParams.first;
     double fittedIntercept = fittedParams.second;
-    wxMessageBox("y = f(x) = a*x +b\nSlope: " + std::to_string(fittedSlope) 
-    + ", Intercept: " + std::to_string(fittedIntercept), 
-    "About MathPlotFit", wxOK | wxICON_INFORMATION);
+    wxMessageBox("y = f(x) = a*x +b\nSlope (a): " + std::to_string(fittedSlope) 
+    + ", Intercept (b): " + std::to_string(fittedIntercept), 
+    "Function fitting", wxOK | wxICON_INFORMATION);
+}
+
+void Graph::OnFitPolynomial(wxCommandEvent& event) {
 
 }
 
+void Graph::OnFitExponential(wxCommandEvent& event) {
 
+}
+
+void Graph::OnFitLogarithmic(wxCommandEvent& event) {
+
+}
 
 #endif

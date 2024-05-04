@@ -35,9 +35,8 @@ MyFrame::MyFrame(const wxString& title)
 
     //Add menu Bar
     wxMenu *menuFile = new wxMenu;
-    menuFile->Append(ID_PLOT, "&Plotting...\tCtrl-P");    
-    menuFile->Append(wxID_OPEN);
-    // menuFile->AppendSeparator();
+    menuFile->Append(wxID_OPEN);    
+    menuFile->Append(ID_PLOT, "&Plotting\tCtrl-P");    
     menuFile->Append(wxID_EXIT);
 
  
@@ -48,13 +47,14 @@ MyFrame::MyFrame(const wxString& title)
     menuBar->Append(menuFile, "&File");
     menuBar->Append(menuHelp, "&Help");
  
-    SetMenuBar( menuBar );
+    SetMenuBar(menuBar);
  
     // Add event to menu
     Bind(wxEVT_MENU, &MyFrame::OnOpen, this, wxID_OPEN);
     Bind(wxEVT_MENU, &MyFrame::PlotGraph, this, ID_PLOT);
-    Bind(wxEVT_MENU, &MyFrame::OnAbout, this, wxID_ABOUT);
     Bind(wxEVT_MENU, &MyFrame::OnExit, this, wxID_EXIT);
+    Bind(wxEVT_MENU, &MyFrame::OnAbout, this, wxID_ABOUT);
+
 
     //Add a grid
     MyFrame::grid = new wxGrid(panel, wxID_ANY);

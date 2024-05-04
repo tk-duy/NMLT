@@ -1,2 +1,2 @@
 # NMLT
-MathPlotFit program for data visualization.
+MathPlotFit - GUI app for data visualization and processing.
