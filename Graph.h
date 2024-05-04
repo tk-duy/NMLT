@@ -9,15 +9,21 @@
 
 class Graph : public wxFrame {
     private:
-        std::vector<double>* xData;
-        std::vector<double>* yData;
+        std::vector<double> xData;
+        std::vector<double> yData;
     public:
-        Graph(std::vector<double>* xData, std::vector<double>* yData);
+        Graph(std::vector<double>& x, std::vector<double>& y);
+        int getSizeX();
+        std::pair<double, double> Fitting(std::vector<double>& xData, std::vector<double>& yData);
         void OnFitLinear(wxCommandEvent& event);
+        void OnFitPolynomial(wxCommandEvent& event);
+        void OnFitExponential(wxCommandEvent& event);
+        void OnFitLogarithmic(wxCommandEvent& event);
 };
 
-Graph::Graph(std::vector<double>* xData, std::vector<double>* yData) 
-    : wxFrame(NULL, wxID_ANY, "title", wxDefaultPosition, wxSize(600,600)) {
+Graph::Graph(std::vector<double>& x, std::vector<double>& y) 
+    : wxFrame(NULL, wxID_ANY, "title", wxDefaultPosition, wxSize(600,600))
+     {
     mpWindow* plotWindows = new mpWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSUNKEN_BORDER);
 
     // Add menu 
@@ -31,17 +37,17 @@ Graph::Graph(std::vector<double>* xData, std::vector<double>* yData)
     // Connect event handler for menu
     Bind(wxEVT_MENU, &Graph::OnFitLinear, this, wxID_ANY);
 
+    this->xData = x;
+    this->yData = y;
 
-    this->xData = xData;
-    this->yData = yData;
-    auto minX = *std::min_element((*(this->xData)).begin(), (*(this->xData)).end());
-    auto maxX = *std::max_element((*(this->xData)).begin(), (*(this->xData)).end());
-    auto minY = *std::min_element((*(this->yData)).begin(), (*(this->yData)).end());
-    auto maxY = *std::max_element((*(this->yData)).begin(), (*(this->yData)).end());
+    // auto minX = *std::min_element(x.begin(), x.end());
+    // auto maxX = *std::max_element(x.begin(), x.end());
+    // auto minY = *std::min_element(y.begin(), y.end());
+    // auto maxY = *std::max_element(y.begin(), y.end());
 
     // Create a plot
     mpFXYVector* plot  = new mpFXYVector();
-    plot->SetData(*(this->xData), *(this->yData));
+    plot->SetData(x, y);
     plot->SetContinuity(false);
 
     // Create pen 
@@ -50,7 +56,7 @@ Graph::Graph(std::vector<double>* xData, std::vector<double>* yData)
     plot->SetPen(pen);
 
     // Adjust data to fit into screen
-    plotWindows->Fit(minX, maxX, minY, maxY);
+    // plotWindows->Fit(minX, maxX, minY, maxY);
     plotWindows->AddLayer(plot);
     plotWindows->UpdateAll();
 
@@ -64,9 +70,17 @@ Graph::Graph(std::vector<double>* xData, std::vector<double>* yData)
 
     plotWindows->EnableDoubleBuffer(true);
     plotWindows->LockAspect();
+    
+
     // Set plot window as the main window
-    Show(true);  
+    Show(true);
+
 }
+
+int Graph::getSizeX() {
+    return (this->xData).size();
+}
+
 
 // Linear model: y = ax + b
 int linear(const gsl_vector* x, void* params, gsl_vector* f) {
@@ -99,7 +113,7 @@ int logarithmic(const gsl_vector* x, void* params, const gsl_vector* f) {
     return GSL_SUCCESS;
 }
 
-std::pair<double, double> Fitting(std::vector<double>& xData, std::vector<double>& yData) {
+std::pair<double, double> Graph::Fitting(std::vector<double>& xData, std::vector<double>& yData) {
     // Initialize GSL fitting
     const size_t numParams = 2; // Number of parameters (slope and intercept)
     const size_t numData = xData.size(); // Number of data points
@@ -143,7 +157,13 @@ std::pair<double, double> Fitting(std::vector<double>& xData, std::vector<double
 }
 
 void Graph::OnFitLinear(wxCommandEvent& event) {
-    Fitting(*(this->xData), *(this->yData));
+    auto fittedParams = Graph::Fitting(this->xData, this->yData);
+    double fittedSlope = fittedParams.first;
+    double fittedIntercept = fittedParams.second;
+    wxMessageBox("y = f(x) = a*x +b\nSlope: " + std::to_string(fittedSlope) 
+    + ", Intercept: " + std::to_string(fittedIntercept), 
+    "About MathPlotFit", wxOK | wxICON_INFORMATION);
+
 }
 
 

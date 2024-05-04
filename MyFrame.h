@@ -1,14 +1,11 @@
 #include <wx/wx.h>
 #include <wx-3.0/wx/grid.h>
 #include <bits/stdc++.h>
-#include <fstream>
 #include <wx-3.0/wx/tokenzr.h>
-#include <string.h>
 #include "mathplot.h"
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_multifit.h>
 #include <gsl/gsl_multifit_nlin.h>
-#include <functional>
 #include "Graph.h"
 
 class MyFrame : public wxFrame {
@@ -122,5 +119,5 @@ void MyFrame::PlotGraph(wxCommandEvent& event) {
     std::vector<double> x = {0, 1, 2, 3, 4, 5};
     std::vector<double> y = {1, 3, 5, 7, 9, 11};
 
-    Graph* graph = new Graph(&x, &y);
+    Graph* graph = new Graph(x, y);
 }
