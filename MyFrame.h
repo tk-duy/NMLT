@@ -1,10 +1,12 @@
+#ifndef MYFRAME_H
+#define MYFRAME_H
+
 #include <wx/wx.h>
 #include <wx-3.0/wx/grid.h>
 #include <bits/stdc++.h>
 #include <wx-3.0/wx/tokenzr.h>
 #include "mathplot.h"
 #include <gsl/gsl_vector.h>
-#include <gsl/gsl_multifit.h>
 #include <gsl/gsl_multifit_nlin.h>
 #include "Graph.h"
 
@@ -20,6 +22,7 @@ class MyFrame : public wxFrame {
         void OnExit(wxCommandEvent& event);
         void OnAbout(wxCommandEvent& event);
         void LoadFileToGrid(const wxString& filePath);
+        std::pair<std::vector<double>, std::vector<double>> SelectedData();
 };
 
 enum
@@ -67,6 +70,7 @@ MyFrame::MyFrame(const wxString& title)
 
     panel->SetSizerAndFit(sizer);
 }
+
 // File openning method
 void MyFrame::OnOpen(wxCommandEvent& event) {
     // Create a file dialog
@@ -87,11 +91,13 @@ void MyFrame::OnExit(wxCommandEvent& event)
 {
     Close(true);
 }
-// About mathplotfit
+
+// About MathPlotFit
 void MyFrame::OnAbout(wxCommandEvent& event) {
-    wxMessageBox("MathPlotFit is a tool for data processing.",
+    wxMessageBox("MathPlotFit is a tool for data visualization and processing.",
                     "About MathPlotFit", wxOK | wxICON_INFORMATION);
 }
+
 // Method of load file to grid 
 void MyFrame::LoadFileToGrid(const wxString& filePath) {
     std::ifstream file(filePath.ToStdString());
@@ -115,9 +121,44 @@ void MyFrame::LoadFileToGrid(const wxString& filePath) {
     file.close();  
 }
 
+// Method of plot a graph
 void MyFrame::PlotGraph(wxCommandEvent& event) {
-    std::vector<double> x = {0, 1, 2, 3, 4, 5};
-    std::vector<double> y = {1, 3, 5, 7, 9, 11};
+    auto data = SelectedData();
+    std::vector<double> x = data.first;
+    std::vector<double> y = data.second;
 
     Graph* graph = new Graph(x, y);
 }
+
+std::pair<std::vector<double>, std::vector<double>> MyFrame::SelectedData() {
+    std::vector<double> x, y;
+
+    // Get the number of rows and columns in the grid
+    int numRows = grid->GetNumberRows();
+    int numCols = grid->GetNumberCols();
+
+    // Iterate over all cells in the grid
+    for (int row = 0; row < numRows; ++row) {
+        for (int col = 0; col < numCols; ++col) {
+            // Check if the cell is selected
+            if (grid->IsInSelection(row, col)) {
+                // Get the value of the selected cell
+                wxString value = grid->GetCellValue(row, col);
+
+                // Convert the value to double and store it in the appropriate vector
+                double val;
+                value.ToDouble(&val);
+                if (x.size() == y.size()) {
+                    x.push_back(val);
+                } else {
+                    y.push_back(val);
+                }
+            }
+        }
+    }
+
+    return std::make_pair(x, y);
+}
+
+
+#endif
