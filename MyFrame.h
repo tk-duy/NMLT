@@ -61,7 +61,7 @@ MyFrame::MyFrame(const wxString& title)
 
     //Add a grid
     MyFrame::grid = new wxGrid(panel, wxID_ANY);
-    grid->CreateGrid(300, 300); // Create a 5x5 grid
+    grid->CreateGrid(50, 50); // Create a 50x50 grid
     grid->SetDefaultCellBackgroundColour(*wxWHITE);
     grid->SetDefaultCellTextColour(*wxBLACK);
 
@@ -126,8 +126,22 @@ void MyFrame::PlotGraph(wxCommandEvent& event) {
     auto data = SelectedData();
     std::vector<double> x = data.first;
     std::vector<double> y = data.second;
-
-    Graph* graph = new Graph(x, y);
+    try
+    {
+        /* Check if vectors is empty: */
+        if(x.empty() || y.empty())
+            throw std::runtime_error("Data is invalid!");
+        else if(x.size() != y.size())
+            throw std::runtime_error("Data is not consistent!");
+        else 
+            Graph* graph = new Graph(x, y);
+    }
+    catch(const std::exception& e)
+    {
+        wxMessageBox("The selected data is invalid (empty or not consistent), please try again.",
+                        "Plotting error", wxOK | wxICON_INFORMATION);
+        return;
+    }
 }
 
 std::pair<std::vector<double>, std::vector<double>> MyFrame::SelectedData() {
@@ -144,7 +158,7 @@ std::pair<std::vector<double>, std::vector<double>> MyFrame::SelectedData() {
             if (grid->IsInSelection(row, col)) {
                 // Get the value of the selected cell
                 wxString value = grid->GetCellValue(row, col);
-
+                if(value.IsEmpty()) {return std::make_pair(x, y);} // To select by columns
                 // Convert the value to double and store it in the appropriate vector
                 double val;
                 value.ToDouble(&val);

@@ -5,12 +5,14 @@
 #include <wx-3.0/wx/wx.h>
 #include "mathplot.h"
 #include <gsl/gsl_multifit_nlin.h>
+#include <numeric>
 
 class Graph : public wxFrame {
     private:
         std::vector<double> xData;
         std::vector<double> yData;
         mpWindow* plotWindows = new mpWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSUNKEN_BORDER);
+        mpText* textLayer = nullptr;
 
     public:
         Graph(std::vector<double>& x, std::vector<double>& y);
@@ -18,9 +20,9 @@ class Graph : public wxFrame {
         static int exponential(const gsl_vector* x, void* params, gsl_vector* f);  
         static int logarithmic(const gsl_vector* x, void* params, gsl_vector* f);          
         std::pair<double, double> Fitting(std::vector<double>& x, std::vector<double>& y, std::string modelname);
-        void Draw(std::vector<double>& x, std::vector<double>& y);
+        void Draw(std::vector<double>& x, std::vector<double>& y, std::string label);
+        double calculateR2(const std::vector<double>& observed, const std::vector<double>& predicted);
         void OnFitLinear(wxCommandEvent& event);
-        void OnFitPolynomial(wxCommandEvent& event);
         void OnFitExponential(wxCommandEvent& event);
         void OnFitLogarithmic(wxCommandEvent& event);
 };
@@ -41,7 +43,6 @@ Graph::Graph(std::vector<double>& x, std::vector<double>& y)
     // Add menu 
     wxMenu* fitting = new wxMenu;
     fitting->Append(ID_LINEAR, "Linear");
-    fitting->Append(ID_POLY, "Polynomial");
     fitting->Append(ID_EXP, "Exponential");
     fitting->Append(ID_LOG, "Logarithmic");
 
@@ -51,14 +52,14 @@ Graph::Graph(std::vector<double>& x, std::vector<double>& y)
 
     // Connect event handler for menu
     Bind(wxEVT_MENU, &Graph::OnFitLinear, this, ID_LINEAR);
-    Bind(wxEVT_MENU, &Graph::OnFitPolynomial, this, ID_POLY);
     Bind(wxEVT_MENU, &Graph::OnFitExponential, this, ID_EXP);
     Bind(wxEVT_MENU, &Graph::OnFitLogarithmic, this, ID_LOG);
     
-
+    // Assign parameters to the attributes
     this->xData = x;
     this->yData = y;
 
+    // Get min and max values of vectors
     auto minX = *std::min_element(x.begin(), x.end());
     auto maxX = *std::max_element(x.begin(), x.end());
     auto minY = *std::min_element(y.begin(), y.end());
@@ -70,25 +71,25 @@ Graph::Graph(std::vector<double>& x, std::vector<double>& y)
     plot->SetContinuity(false);
 
     // Create pen 
-    wxPen pen(wxColour(255, 0, 0), 9, wxPENSTYLE_SOLID); 
-     // Set the pen for the plot
+    wxPen pen(wxColour(255, 0, 0), 8, wxPENSTYLE_SOLID); 
     plot->SetPen(pen);
 
     // Adjust data to fit into screen
     plotWindows->Fit(minX, maxX, minY, maxY);
     plotWindows->AddLayer(plot);
-    plotWindows->UpdateAll();
 
     // Set scale
-    mpScaleX *sx = new mpScaleX( wxT("x axis"), 1, false);
+    mpScaleX *sx = new mpScaleX( wxT("x axis"), 1, true);
     sx->SetAlign(mpALIGN_CENTER);
-    mpScaleY *sy = new mpScaleY( wxT("y axis"), 1, false);
+    mpScaleY *sy = new mpScaleY( wxT("y axis"), 1, true);
     sy->SetAlign(mpALIGN_CENTER);
+    
     plotWindows->AddLayer(sx);
     plotWindows->AddLayer(sy);
 
     plotWindows->EnableDoubleBuffer(true);
     plotWindows->LockAspect();
+    plotWindows->UpdateAll();
 
     // Set plot window as the main window
     Show(true);
@@ -112,21 +113,6 @@ int Graph::linear(const gsl_vector* x, void* params, gsl_vector* f) {
 
     return GSL_SUCCESS;
 }
-
-// Polynomial model: y = ax^2 + bx + c
-// int polynomial(const gsl_vector* x, void* params, gsl_vector* f) {
-//     const size_t n = ((std::vector<double>*)params)->size(); // Number of data points
-//     std::vector<double>& data = *((std::vector<double>*)params);
-//     for (size_t i = 0; i < n; ++i) {
-//         double t = i; // Independent variable (e.g., time)
-//         double y_model = 0.0;
-//         for (size_t j = 0; j < x->size; ++j) {
-//             y_model += gsl_vector_get(x, j) * std::pow(t, j); // Polynomial model
-//         }
-//         gsl_vector_set(f, i, y_model - data[i]); // Residual
-//     }
-//     return GSL_SUCCESS;
-// }
 
 // Exponential model: y = a*exp(bx)
 int Graph::exponential(const gsl_vector* x, void* params, gsl_vector* f) {
@@ -161,13 +147,26 @@ int Graph::logarithmic(const gsl_vector* x, void* params, gsl_vector* f) {
 }
 
 
-// Method of fit to a function from data
+// Method of fitting data to a function
 std::pair<double, double> Graph::Fitting(std::vector<double>& x, std::vector<double>& y, std::string modelname) {
     // Initialize GSL fitting
-    const size_t numParams = 2; // Number of parameters (slope and intercept)
+    const size_t numParams = 2; // Number of parameters (a and b)
     const size_t numData = x.size(); // Number of data points
     gsl_multifit_function_fdf fittingFunc;
-    fittingFunc.f = &Graph::linear;
+    try
+    {
+        /* If model name passed is invalid: */
+        if(modelname == "linear") fittingFunc.f = &Graph::linear;
+        else if(modelname == "exponential") fittingFunc.f = &Graph::exponential;
+        else if(modelname == "logarithmic") fittingFunc.f = &Graph::logarithmic;
+        else throw std::runtime_error("Invalid model");
+    }
+    catch(const std::exception& e)
+    {
+        wxMessageBox("The passed model is invalid, please double-check the model name.",
+                "Runtime error", wxOK | wxICON_INFORMATION);
+        return std::make_pair(0, 0);
+    }
     fittingFunc.df = nullptr;
     fittingFunc.fdf = nullptr;
     fittingFunc.n = numData;
@@ -176,10 +175,8 @@ std::pair<double, double> Graph::Fitting(std::vector<double>& x, std::vector<dou
 
     // Initial guess for parameters
     gsl_vector* params = gsl_vector_alloc(numParams);
-    double amplitude_guess = y[0]; // Estimate amplitude as the value at x = 0
-    double growth_guess = log(y[1] / y[0]); // Estimate growth rate using values at x = 0 and x = 1
-    gsl_vector_set(params, 0, amplitude_guess); // Initial guess for slope
-    gsl_vector_set(params, 1, growth_guess); // Initial guess for intercept
+    gsl_vector_set(params, 0, 1.0); // Initial guess for a
+    gsl_vector_set(params, 1, 0.0); // Initial guess for b
 
     // Fitting using Levenberg-Marquardt algorithm
     gsl_multifit_fdfsolver* solver = gsl_multifit_fdfsolver_alloc(gsl_multifit_fdfsolver_lmsder, numData, numParams);
@@ -197,83 +194,82 @@ std::pair<double, double> Graph::Fitting(std::vector<double>& x, std::vector<dou
     } while (status == GSL_CONTINUE && iter < 1000);
 
     // Get fitted parameters
-    double slope = gsl_vector_get(solver->x, 0);
-    double intercept = gsl_vector_get(solver->x, 1);
+    double a = gsl_vector_get(solver->x, 0);
+    double b = gsl_vector_get(solver->x, 1);
 
     // Clean up
     gsl_vector_free(params);
     gsl_multifit_fdfsolver_free(solver);
 
-    return std::make_pair(slope, intercept);
+    return std::make_pair(a, b);
 }
 
-// double calculateR2(const std::vector<double>& observed, const std::vector<double>& predicted) {
-//     // Calculate the mean of the observed values
-//     double mean = std::accumulate(observed.begin(), observed.end(), 0.0) / observed.size();
+double Graph::calculateR2(const std::vector<double>& observed, const std::vector<double>& predicted) {
+    // Calculate the mean of the observed values
+    double mean = std::accumulate(observed.begin(), observed.end(), 0.0) / observed.size();
 
-//     // Calculate Total Sum of Squares (TSS)
-//     double tss = std::accumulate(observed.begin(), observed.end(), 0.0,
-//         [&mean](double sum, double value) {
-//             return sum + std::pow(value - mean, 2);
-//         });
+    // Calculate Total Sum of Squares (TSS)
+    double tss = std::accumulate(observed.begin(), observed.end(), 0.0,
+        [&mean](double sum, double value) {
+            return sum + std::pow(value - mean, 2);
+        });
 
-//     // Calculate Residual Sum of Squares (RSS)
-//     double rss = std::inner_product(observed.begin(), observed.end(), predicted.begin(), 0.0,
-//         [](double sum, double obs, double pred) {
-//             double residual = obs - pred;
-//             return sum + (residual * residual);
-//         });
+    // Calculate Residual Sum of Squares (RSS)
+    double rss = std::inner_product(observed.begin(), observed.end(), predicted.begin(), 0.0,
+        [](double sum, double residual) {
+            return sum + (residual * residual);
+            },
+        [](double sum, double val) {
+            return val; // Neutral element
+    });
 
-//     // Calculate R-squared
-//     double r2 = 1.0 - (rss / tss);
+    // Calculate R-squared
+    double r2 = 1.0 - (rss / tss);
 
-//     return r2;
-// }
+    return r2;
+}
 
-// Draw
-void Graph::Draw(std::vector<double>& x, std::vector<double>& y) {
+// Drawing
+void Graph::Draw(std::vector<double>& x, std::vector<double>& y, std::string label) {
     mpFXYVector* plot  = new mpFXYVector();
     plot->SetData(x, y);
     plot->SetContinuity(true);
 
         // Create pen 
-    wxPen pen(wxColour(100, 255, 100), 2, wxPENSTYLE_DOT_DASH); 
+    wxPen pen(wxColour(100, 255, 100), 2, wxPENSTYLE_DOT); 
      // Set the pen for the plot
     plot->SetPen(pen);
     plotWindows->AddLayer(plot);
 
-    wxString rsquaredText;
-    rsquaredText.Printf(wxT("y = f(x) = a*x + b\nR-squared: 0.9896"));
-    mpText* textLayer = new mpText(rsquaredText, 75, 90);
+    plotWindows->DelLayer(textLayer, false, false);
+    textLayer = new mpText(label, 70, 85);
     plotWindows->AddLayer(textLayer, false);
+
 
     plotWindows->UpdateAll();
 }
 
 // Linear button
 void Graph::OnFitLinear(wxCommandEvent& event) {
-    auto fittedParams = Graph::Fitting(this->xData, this->yData, "Linear");
-    double fittedSlope = fittedParams.first;
-    double fittedIntercept = fittedParams.second;
+    auto fittedParams = Graph::Fitting(this->xData, this->yData, "linear");
+    double a = fittedParams.first;
+    double b = fittedParams.second;
 
-    wxMessageBox("y = f(x) = a*x +b\nSlope (a): " + std::to_string(fittedSlope) 
-    + ", Intercept (b): " + std::to_string(fittedIntercept), 
-    "Function fitting", wxOK | wxICON_INFORMATION);
     std::vector<double> ypred;
     for(int i = 0; i < (this->xData).size(); i++) {
-        double temp = ((this->xData)[i])*fittedSlope + fittedIntercept;
+        double temp = a*((this->xData)[i]) + b;
         ypred.push_back(temp);
     }
-    Draw(this->xData, ypred);
+    std::string label = "y = F(x) = a*x +b\nSlope (a) = " + std::to_string(a) 
+                                        + "\nBias (b) = " + std::to_string(b)
+                                        + "\nR-squared = " + std::to_string(calculateR2(this->yData, ypred));
+    Draw(this->xData, ypred, label);
 }
 
-// Polynomial button
-void Graph::OnFitPolynomial(wxCommandEvent& event) {
-}
 
 // Exponential button
 void Graph::OnFitExponential(wxCommandEvent& event) {
-    auto fittedParams = Graph::Fitting(this->xData, this->yData, "Exponential");
+    auto fittedParams = Graph::Fitting(this->xData, this->yData, "exponential");
     double a = fittedParams.first;
     double b = fittedParams.second;
 
@@ -282,12 +278,15 @@ void Graph::OnFitExponential(wxCommandEvent& event) {
         double temp = a*exp(b*((this->xData)[i]));
         ypred.push_back(temp);
     }
-    Draw(this->xData, ypred);
+    std::string label = "y = F(x) = a*exp(b*x)\nCoef. a = " + std::to_string(a) 
+                                            + "\nCoef. b = " + std::to_string(b)
+                                            + "\nR-squared = " + std::to_string(calculateR2(this->yData, ypred));
+    Draw(this->xData, ypred, label);
 }
 
 // Logarithmic button
 void Graph::OnFitLogarithmic(wxCommandEvent& event) {
-    auto fittedParams = Graph::Fitting(this->xData, this->yData, "Logarithmic");
+    auto fittedParams = Graph::Fitting(this->xData, this->yData, "logarithmic");
     double a = fittedParams.first;
     double b = fittedParams.second;
 
@@ -296,7 +295,10 @@ void Graph::OnFitLogarithmic(wxCommandEvent& event) {
         double temp = a*log((this->xData)[i]) + b;
         ypred.push_back(temp);
     }
-    Draw(this->xData, ypred);
+    std::string label = "y = F(x) = a*ln(x) + b\nCoef. a = " + std::to_string(a) 
+                                            + "\nCoef. b = " + std::to_string(b)
+                                            + "\nR-squared = " + std::to_string(calculateR2(this->yData, ypred));
+    Draw(this->xData, ypred, label);
 }
 
 #endif
