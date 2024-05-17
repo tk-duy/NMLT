@@ -5,7 +5,7 @@
 #include <wx-3.0/wx/grid.h>
 #include <bits/stdc++.h>
 #include <wx-3.0/wx/tokenzr.h>
-#include "mathplot.h"
+#include "../lib/mathplot.h"
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_multifit_nlin.h>
 #include "Graph.h"
