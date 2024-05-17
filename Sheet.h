@@ -1,5 +1,5 @@
-#ifndef MYFRAME_H
-#define MYFRAME_H
+#ifndef SHEET_H
+#define SHEET_H
 
 #include <wx/wx.h>
 #include <wx-3.0/wx/grid.h>
@@ -10,9 +10,9 @@
 #include <gsl/gsl_multifit_nlin.h>
 #include "Graph.h"
 
-class MyFrame : public wxFrame {
+class Sheet : public wxFrame {
     public:
-        MyFrame(const wxString& title);
+        Sheet(const wxString& title);
 
     private:
         wxGrid* grid = NULL;
@@ -35,8 +35,8 @@ enum
 
 // Implementing functions
 //Re-define constructor
-MyFrame::MyFrame(const wxString& title) 
-    : wxFrame(NULL, wxID_ANY, title, wxDefaultPosition, wxSize(600, 800)) {
+Sheet::Sheet(const wxString& title) 
+    : wxFrame(NULL, wxID_ANY, title, wxDefaultPosition, wxSize(640, 960)) {
     wxPanel* panel = new wxPanel(this, wxID_ANY);
 
     //Add menu Bar
@@ -57,17 +57,17 @@ MyFrame::MyFrame(const wxString& title)
     SetMenuBar(menuBar);
  
     // Add event to menu
-    Bind(wxEVT_MENU, &MyFrame::OnOpen, this, wxID_OPEN);
-    Bind(wxEVT_MENU, &MyFrame::Save, this, ID_SAVE);
-    Bind(wxEVT_MENU, &MyFrame::PlotGraph, this, ID_PLOT);
-    Bind(wxEVT_MENU, &MyFrame::OnExit, this, wxID_EXIT);
-    Bind(wxEVT_MENU, &MyFrame::OnAbout, this, wxID_ABOUT);
+    Bind(wxEVT_MENU, &Sheet::OnOpen, this, wxID_OPEN);
+    Bind(wxEVT_MENU, &Sheet::Save, this, ID_SAVE);
+    Bind(wxEVT_MENU, &Sheet::PlotGraph, this, ID_PLOT);
+    Bind(wxEVT_MENU, &Sheet::OnExit, this, wxID_EXIT);
+    Bind(wxEVT_MENU, &Sheet::OnAbout, this, wxID_ABOUT);
 
 
 
     //Add a grid
-    MyFrame::grid = new wxGrid(panel, wxID_ANY);
-    grid->CreateGrid(100, 50); // Create a 50x50 grid
+    Sheet::grid = new wxGrid(panel, wxID_ANY);
+    grid->CreateGrid(100, 50); // Create a 100x50 grid
     grid->SetDefaultCellBackgroundColour(*wxWHITE);
     grid->SetDefaultCellTextColour(*wxBLACK);
 
@@ -78,7 +78,7 @@ MyFrame::MyFrame(const wxString& title)
 }
 
 // File openning method
-void MyFrame::OnOpen(wxCommandEvent& event) {
+void Sheet::OnOpen(wxCommandEvent& event) {
     // Create a file dialog
     wxFileDialog wxFileDialog(this, "Open File", "", "", 
                             "Text Files (*.txt)|*.txt|CSV Files (*.csv)|*.csv", 
@@ -92,8 +92,8 @@ void MyFrame::OnOpen(wxCommandEvent& event) {
     LoadFileToGrid(filePath);
 }
 
-// Save
-void MyFrame::Save(wxCommandEvent& event) {
+// Save method
+void Sheet::Save(wxCommandEvent& event) {
     wxFileDialog saveFileDialog(grid->GetParent(), _("Save CSV file"), "", "",
                                 "CSV files (*.csv)|*.csv|TXT files (*.txt)|*.txt", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
 
@@ -107,19 +107,19 @@ void MyFrame::Save(wxCommandEvent& event) {
 
 
 // Exitting method
-void MyFrame::OnExit(wxCommandEvent& event)
+void Sheet::OnExit(wxCommandEvent& event)
 {
     Close(true);
 }
 
 // About MathPlotFit
-void MyFrame::OnAbout(wxCommandEvent& event) {
-    wxMessageBox("MathPlotFit is a tool for data visualization and processing.",
+void Sheet::OnAbout(wxCommandEvent& event) {
+    wxMessageBox("MathPlotFit is a tool for data visualization and analysis.",
                     "About MathPlotFit", wxOK | wxICON_INFORMATION);
 }
 
 // Method of load file to grid 
-void MyFrame::LoadFileToGrid(const wxString& filePath) {
+void Sheet::LoadFileToGrid(const wxString& filePath) {
     std::ifstream file(filePath.ToStdString());
     if (!file.is_open()) {
         wxMessageBox("Failed to open file!", "Error", wxOK | wxICON_ERROR);
@@ -152,7 +152,7 @@ void MyFrame::LoadFileToGrid(const wxString& filePath) {
 }
 
 // Method of plot a graph
-void MyFrame::PlotGraph(wxCommandEvent& event) {
+void Sheet::PlotGraph(wxCommandEvent& event) {
     auto data = SelectedData();
     std::vector<double> x = data.first;
     std::vector<double> y = data.second;
@@ -174,7 +174,7 @@ void MyFrame::PlotGraph(wxCommandEvent& event) {
     }
 }
 
-std::pair<std::vector<double>, std::vector<double>> MyFrame::SelectedData() {
+std::pair<std::vector<double>, std::vector<double>> Sheet::SelectedData() {
     std::vector<double> x, y;
 
     // Get the number of rows and columns in the grid
@@ -204,7 +204,8 @@ std::pair<std::vector<double>, std::vector<double>> MyFrame::SelectedData() {
     return std::make_pair(x, y);
 }
 
-void MyFrame::Export(wxGrid* grid, const wxString& filePath) {
+// Method of export file
+void Sheet::Export(wxGrid* grid, const wxString& filePath) {
     int numRows = grid->GetNumberRows();
     int numCols = grid->GetNumberCols();
     

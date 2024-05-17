@@ -1,12 +1,12 @@
 // g++ -o main main.cpp mathplot.cpp `wx-config --cxxflags --libs` -lgsl -lgslcblas
 #include <wx/wx.h>
-#include "MyFrame.h"
+#include "Sheet.h"
 
 
 class MyApp : public wxApp {
 public:
     virtual bool OnInit() {
-        MyFrame* frame = new MyFrame("MathPlotFit");
+        Sheet* frame = new Sheet("MathPlotFit");
         frame->Show(true);
         return true;
     }
