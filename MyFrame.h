@@ -18,27 +18,31 @@ class MyFrame : public wxFrame {
         wxGrid* grid = NULL;
 
         void OnOpen(wxCommandEvent& event);
+        void Save(wxCommandEvent& event);
         void PlotGraph(wxCommandEvent& event);
         void OnExit(wxCommandEvent& event);
         void OnAbout(wxCommandEvent& event);
         void LoadFileToGrid(const wxString& filePath);
         std::pair<std::vector<double>, std::vector<double>> SelectedData();
+        void Export(wxGrid* grid, const wxString& filepath);
 };
 
 enum
 {
+    ID_SAVE,
     ID_PLOT,
 };
 
 // Implementing functions
 //Re-define constructor
 MyFrame::MyFrame(const wxString& title) 
-    : wxFrame(NULL, wxID_ANY, title, wxDefaultPosition, wxSize(800, 600)) {
+    : wxFrame(NULL, wxID_ANY, title, wxDefaultPosition, wxSize(600, 800)) {
     wxPanel* panel = new wxPanel(this, wxID_ANY);
 
     //Add menu Bar
     wxMenu *menuFile = new wxMenu;
-    menuFile->Append(wxID_OPEN);    
+    menuFile->Append(wxID_OPEN);
+    menuFile->Append(ID_SAVE, "&Save as...\tCtrl-S");
     menuFile->Append(ID_PLOT, "&Plotting\tCtrl-P");    
     menuFile->Append(wxID_EXIT);
 
@@ -54,14 +58,16 @@ MyFrame::MyFrame(const wxString& title)
  
     // Add event to menu
     Bind(wxEVT_MENU, &MyFrame::OnOpen, this, wxID_OPEN);
+    Bind(wxEVT_MENU, &MyFrame::Save, this, ID_SAVE);
     Bind(wxEVT_MENU, &MyFrame::PlotGraph, this, ID_PLOT);
     Bind(wxEVT_MENU, &MyFrame::OnExit, this, wxID_EXIT);
     Bind(wxEVT_MENU, &MyFrame::OnAbout, this, wxID_ABOUT);
 
 
+
     //Add a grid
     MyFrame::grid = new wxGrid(panel, wxID_ANY);
-    grid->CreateGrid(50, 50); // Create a 50x50 grid
+    grid->CreateGrid(100, 50); // Create a 50x50 grid
     grid->SetDefaultCellBackgroundColour(*wxWHITE);
     grid->SetDefaultCellTextColour(*wxBLACK);
 
@@ -86,6 +92,20 @@ void MyFrame::OnOpen(wxCommandEvent& event) {
     LoadFileToGrid(filePath);
 }
 
+// Save
+void MyFrame::Save(wxCommandEvent& event) {
+    wxFileDialog saveFileDialog(grid->GetParent(), _("Save CSV file"), "", "",
+                                "CSV files (*.csv)|*.csv|TXT files (*.txt)|*.txt", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+
+    if (saveFileDialog.ShowModal() == wxID_CANCEL) {
+        return; // the user changed idea...
+    }
+
+    wxString filePath = saveFileDialog.GetPath();
+    Export(grid, filePath);
+}
+
+
 // Exitting method
 void MyFrame::OnExit(wxCommandEvent& event)
 {
@@ -107,11 +127,21 @@ void MyFrame::LoadFileToGrid(const wxString& filePath) {
     }
 
     std::string line;
+    int numRows = grid->GetNumberRows();
+    int numCols = grid->GetNumberCols();
+
+    for (int row = 0; row < numRows; ++row) {
+        for (int col = 0; col < numCols; ++col) {
+            if(grid->GetCellValue(row, col).IsEmpty()) continue;
+            grid->SetCellValue(row, col, "");
+        }
+    }
+
     int row = 0;
-    while (std::getline(file, line) && row < MyFrame::grid->GetNumberRows()) {
+    while (std::getline(file, line) && row < numRows) {
         wxStringTokenizer tokenizer(line, ",");
         int col = 0;
-        while (tokenizer.HasMoreTokens() && col < MyFrame::grid->GetNumberCols()) {
+        while (tokenizer.HasMoreTokens() && col < numCols) {
             wxString token = tokenizer.GetNextToken();
             grid->SetCellValue(row, col, token);
             col++;
@@ -174,5 +204,38 @@ std::pair<std::vector<double>, std::vector<double>> MyFrame::SelectedData() {
     return std::make_pair(x, y);
 }
 
+void MyFrame::Export(wxGrid* grid, const wxString& filePath) {
+    int numRows = grid->GetNumberRows();
+    int numCols = grid->GetNumberCols();
+    
+    std::ofstream file;
+    file.open(filePath.ToStdString());
+
+    if (!file.is_open()) {
+        wxLogError("Cannot open file '%s' for writing.", filePath);
+        return;
+    }
+
+    for (int row = 0; row < numRows; ++row) {
+        std::stringstream ss;
+        for (int col = 0; col < numCols; ++col) {
+            wxString value = grid->GetCellValue(row, col);
+            if(value.IsEmpty()) continue;
+            ss << value.ToStdString();
+            if (col < numCols - 1) {
+                ss << ",";
+            }
+        }
+        file << ss.str() << "\n";
+    }
+
+    file.close();
+
+    if (!file.good()) {
+        wxLogError("Error occurred while writing to file '%s'.", filePath);
+    } else {
+        wxLogMessage("Successfully exported data to '%s'.", filePath);
+    }
+}
 
 #endif

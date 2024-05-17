@@ -37,7 +37,7 @@ enum {
 // Implementation
 // Re-define constructor
 Graph::Graph(std::vector<double>& x, std::vector<double>& y) 
-    : wxFrame(NULL, wxID_ANY, "2D Graph", wxDefaultPosition, wxSize(600,600))
+    : wxFrame(NULL, wxID_ANY, "2D Graph", wxDefaultPosition, wxSize(800,600))
      {
 
     // Add menu 
@@ -100,15 +100,19 @@ Graph::Graph(std::vector<double>& x, std::vector<double>& y)
 // Define models
 // Linear model: y = ax + b
 int Graph::linear(const gsl_vector* x, void* params, gsl_vector* f) {
+
     double m = gsl_vector_get(x, 0); // Slope
     double c = gsl_vector_get(x, 1); // Intercept
-    size_t n = ((std::vector<double>*)params)->size(); // Number of data points
-    std::vector<double>& data = *((std::vector<double>*)params);
+    auto* data = static_cast<std::pair<const std::vector<double>*, const std::vector<double>*>*>(params);
+    const std::vector<double>& xdata = *(data->first);
+    const std::vector<double>& ydata = *(data->second);
+
+    size_t n = xdata.size(); // Number of data points
 
     for (size_t i = 0; i < n; ++i) {
-        double t = i; // Independent variable (e.g., time)
+        double t = xdata[i]; // Independent variable
         double y_model = m * t + c; // Model prediction
-        gsl_vector_set(f, i, y_model - data[i]); // Residual
+        gsl_vector_set(f, i, y_model - ydata[i]); // Residual
     }
 
     return GSL_SUCCESS;
@@ -116,15 +120,18 @@ int Graph::linear(const gsl_vector* x, void* params, gsl_vector* f) {
 
 // Exponential model: y = a*exp(bx)
 int Graph::exponential(const gsl_vector* x, void* params, gsl_vector* f) {
-    const size_t n = ((std::vector<double>*)params)->size(); // Number of data points
-    std::vector<double>& data = *((std::vector<double>*)params);
+    double a = gsl_vector_get(x, 0); // Coef. a
+    double b = gsl_vector_get(x, 1); // Coef. b
+    auto* data = static_cast<std::pair<const std::vector<double>*, const std::vector<double>*>*>(params);
+    const std::vector<double>& xdata = *(data->first);
+    const std::vector<double>& ydata = *(data->second);
+
+    size_t n = xdata.size(); // Number of data points
 
     for (size_t i = 0; i < n; ++i) {
-        double t = i; // Independent variable (e.g., time)
-        double a = gsl_vector_get(x, 0); // Parameter a
-        double b = gsl_vector_get(x, 1); // Parameter b
-        double y_model = a * exp(b * t); // Exponential model
-        gsl_vector_set(f, i, y_model - data[i]); // Residual
+        double t = xdata[i]; // Independent variable
+        double y_model = a * exp(b*t); // Exponetial model
+        gsl_vector_set(f, i, y_model - ydata[i]); // Residual
     }
 
     return GSL_SUCCESS;
@@ -132,15 +139,23 @@ int Graph::exponential(const gsl_vector* x, void* params, gsl_vector* f) {
 
 // Logarithmic model: y = a*ln(x) + b
 int Graph::logarithmic(const gsl_vector* x, void* params, gsl_vector* f) {
-    const size_t n = ((std::vector<double>*)params)->size(); // Number of data points
-    std::vector<double>& data = *((std::vector<double>*)params);
+    double a = gsl_vector_get(x, 0); // Coef. a
+    double b = gsl_vector_get(x, 1); // Coef. b
+    auto* data = static_cast<std::pair<const std::vector<double>*, const std::vector<double>*>*>(params);
+    const std::vector<double>& xdata = *(data->first);
+    const std::vector<double>& ydata = *(data->second);
+
+    size_t n = xdata.size(); // Number of data points
 
     for (size_t i = 0; i < n; ++i) {
-        double t = i; // Independent variable (e.g., time)
-        double a = gsl_vector_get(x, 0); // Parameter a
-        double b = gsl_vector_get(x, 1); // Parameter b
-        double y_model = a + b * log(t); // Logarithmic model
-        gsl_vector_set(f, i, y_model - data[i]); // Residual
+        double t = xdata[i]; // Independent variable
+        if (t <= 0) {
+            // Handle the case where t is zero or negative to avoid log(0) or log(negative number)
+            gsl_vector_set(f, i, std::numeric_limits<double>::infinity());
+        } else {
+            double y_model = a * log(t) + b; // Logarithmic model
+            gsl_vector_set(f, i, y_model - ydata[i]); // Residual
+        }
     }
 
     return GSL_SUCCESS;
@@ -171,7 +186,8 @@ std::pair<double, double> Graph::Fitting(std::vector<double>& x, std::vector<dou
     fittingFunc.fdf = nullptr;
     fittingFunc.n = numData;
     fittingFunc.p = numParams;
-    fittingFunc.params = &y;
+    std::pair<const std::vector<double>*, const std::vector<double>*> paramsPair(&x, &y);
+    fittingFunc.params = &paramsPair;
 
     // Initial guess for parameters
     gsl_vector* params = gsl_vector_alloc(numParams);
@@ -190,7 +206,7 @@ std::pair<double, double> Graph::Fitting(std::vector<double>& x, std::vector<dou
         status = gsl_multifit_fdfsolver_iterate(solver);
         if (status)
             break;
-        status = gsl_multifit_test_delta(solver->dx, solver->x, 1e-4, 1e-4);
+        status = gsl_multifit_test_delta(solver->dx, solver->x, 1e-6, 1e-6);
     } while (status == GSL_CONTINUE && iter < 1000);
 
     // Get fitted parameters
@@ -205,23 +221,40 @@ std::pair<double, double> Graph::Fitting(std::vector<double>& x, std::vector<dou
 }
 
 double Graph::calculateR2(const std::vector<double>& observed, const std::vector<double>& predicted) {
+    // check if exists not consistent vector exception
+    try
+    {
+        if (observed.size() != predicted.size())
+            throw std::runtime_error("Not consistent vector.");
+    }
+    catch(const std::exception& e)
+    {
+        wxMessageBox("Observed and predicted vector is not consistent, please check again!",
+                "About MathPlotFit", wxOK | wxICON_INFORMATION);
+        return 0;
+    }
+    int sz = observed.size();
+
     // Calculate the mean of the observed values
-    double mean = std::accumulate(observed.begin(), observed.end(), 0.0) / observed.size();
+    double mean = 0;
+    for(int k = 0; k < sz; k++) {
+        mean += observed[k];
+    }
+    mean = mean/(sz);
 
     // Calculate Total Sum of Squares (TSS)
-    double tss = std::accumulate(observed.begin(), observed.end(), 0.0,
-        [&mean](double sum, double value) {
-            return sum + std::pow(value - mean, 2);
-        });
+    double tss = 0;
+    for(int i = 0; i < sz; i++) {
+        double n = std::pow(observed[i] - mean, 2);
+        tss += n;
+    }
 
     // Calculate Residual Sum of Squares (RSS)
-    double rss = std::inner_product(observed.begin(), observed.end(), predicted.begin(), 0.0,
-        [](double sum, double residual) {
-            return sum + (residual * residual);
-            },
-        [](double sum, double val) {
-            return val; // Neutral element
-    });
+    double rss = 0;
+    for(int j = 0; j < sz; j++) {
+        double m = std::pow(observed[j] - predicted[j], 2);
+        rss += m;
+    }
 
     // Calculate R-squared
     double r2 = 1.0 - (rss / tss);
