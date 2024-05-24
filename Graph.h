@@ -11,6 +11,7 @@ class Graph : public wxFrame {
         std::vector<double> xData;
         std::vector<double> yData;
         mpWindow* plotWindows = new mpWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSUNKEN_BORDER);
+        mpFXYVector* plot;
         mpText* textLayer = nullptr;
 
     public:
@@ -263,7 +264,9 @@ double Graph::calculateR2(const std::vector<double>& observed, const std::vector
 
 // Drawing
 void Graph::Draw(std::vector<double>& x, std::vector<double>& y, std::string label) {
-    mpFXYVector* plot  = new mpFXYVector();
+    plotWindows->DelLayer(plot, false, false);
+    plotWindows->DelLayer(textLayer, false, false);
+    plot  = new mpFXYVector();
     plot->SetData(x, y);
     plot->SetContinuity(true);
 
@@ -273,7 +276,6 @@ void Graph::Draw(std::vector<double>& x, std::vector<double>& y, std::string lab
     plot->SetPen(pen);
     plotWindows->AddLayer(plot);
 
-    plotWindows->DelLayer(textLayer, false, false);
     textLayer = new mpText(label, 70, 85);
     plotWindows->AddLayer(textLayer, false);
 
