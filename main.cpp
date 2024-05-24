@@ -1,4 +1,3 @@
-// g++ -o main main.cpp mathplot.cpp `wx-config --cxxflags --libs` -lgsl -lgslcblas
 #include <wx/wx.h>
 #include "Sheet.h"
 

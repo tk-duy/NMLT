@@ -3,9 +3,8 @@
 
 #include <bits/stdc++.h>
 #include <wx-3.0/wx/wx.h>
-#include "../lib/mathplot.h"
+#include "mathplot.h"
 #include <gsl/gsl_multifit_nlin.h>
-#include <numeric>
 
 class Graph : public wxFrame {
     private:

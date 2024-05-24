@@ -5,18 +5,17 @@
 #include <wx-3.0/wx/grid.h>
 #include <bits/stdc++.h>
 #include <wx-3.0/wx/tokenzr.h>
-#include "../lib/mathplot.h"
+#include "mathplot.h"
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_multifit_nlin.h>
 #include "Graph.h"
 
 class Sheet : public wxFrame {
-    public:
-        Sheet(const wxString& title);
-
     private:
         wxGrid* grid = NULL;
 
+    public:
+        Sheet(const wxString& title);
         void OnOpen(wxCommandEvent& event);
         void Save(wxCommandEvent& event);
         void PlotGraph(wxCommandEvent& event);
@@ -174,6 +173,7 @@ void Sheet::PlotGraph(wxCommandEvent& event) {
     }
 }
 
+// To select data from the sheet
 std::pair<std::vector<double>, std::vector<double>> Sheet::SelectedData() {
     std::vector<double> x, y;
 
