@@ -7,4 +7,5 @@ Tutorial:
 3. In this folder, direct to sources folder, open terminal and run this command:
 <br>
 g++ -o main main.cpp mathplot.cpp \`wx-config --cxxflags --libs\` -lgsl -lgslcblas
+<br>
 ./main
